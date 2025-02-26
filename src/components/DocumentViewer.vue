@@ -57,5 +57,30 @@ const handlePrint = () => {
       </div>
     </div>
     
+    <!-- Table of Contents (missing in your code) -->
+    <div 
+      v-if="tocVisible && tableOfContents.length > 0"
+      class="mb-6 p-3 sm:p-4 bg-gray-50 rounded border border-gray-200 overflow-auto max-h-64"
+    >
+      <h3 class="text-base sm:text-lg font-semibold mb-2">Table of Contents</h3>
+      <ul class="space-y-1 text-sm sm:text-base">
+        <li v-for="heading in tableOfContents" :key="heading.id">
+          <button 
+            @click="scrollToHeading(heading.id)"
+            :class="[
+              'text-blue-600 hover:text-blue-800 text-left transition',
+              `ml-${Math.min(heading.level * 2, 6)}`
+            ]"
+          >
+            {{ heading.text.length > 40 ? heading.text.substring(0, 40) + '...' : heading.text }}
+          </button>
+        </li>
+      </ul>
+    </div>
+    
+    <div v-if="parsedDocument" v-html="parsedDocument.content"></div>
+    <div v-else class="text-center py-12 text-gray-500">
+      <p>No document loaded. Please upload a document to view its content.</p>
+    </div>
   </div>
 </template>

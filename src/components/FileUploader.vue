@@ -132,7 +132,7 @@ const processXmlDocument = (xmlDoc) => {
 
 const processOoxmlPackage = (xmlDoc) => {
   let html = '<div class="document-content ooxml-package">';
-  html += '<h2 class="text-xl font-bold mb-4">OOXML Package Structure</h2>';
+  html += '<h2 class="text-xl font-bold mb-4 text-gray-400">OOXML Package Structure</h2>';
   
   const parts = xmlDoc.querySelectorAll('pkg\\:part, part');
   

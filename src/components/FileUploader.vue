@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 import LoadingIndicator from './LoadingIndicator.vue';
-import { parseDocument } from '../services/documentParser';
+import { parseDocument, extractTextFromRunsWithFormatting } from '../services/documentParser';
 
 const emit = defineEmits(['parsed-document', 'loading', 'error']);
 const fileInput = ref(null);
@@ -45,7 +45,18 @@ const processFile = async (file) => {
     
     console.log('XML parsed successfully');
     
-    const processedDocument = processXmlDocument(xmlDoc);
+    const isDocumentXmlContent = xmlDoc.querySelector('w\\:document, document') !== null;
+    
+    let processedDocument;
+    
+    if (isDocumentXmlContent) {
+      processedDocument = {
+        content: processOoxmlStructure(xmlDoc),
+        headings: extractOoxmlHeadings(xmlDoc)
+      };
+    } else {
+      processedDocument = processXmlDocument(xmlDoc);
+    }
     
     emit('parsed-document', processedDocument);
     emit('loading', false);
@@ -334,71 +345,153 @@ const extractOoxmlRelationshipHeadings = (xmlDoc) => {
 };
 
 const processOoxmlStructure = (xmlDoc) => {
-  const bodyElement = xmlDoc.querySelector('w\\:body, body');
+  const bodyElement = 
+    xmlDoc.querySelector('w\\:body, body') || 
+    xmlDoc.querySelector('pkg\\:package pkg\\:part[pkg\\:name="/word/document.xml"] pkg\\:xmlData w\\:body');
+  
   if (!bodyElement) {
-    return '<div class="text-red-500">No body element found in the XML file.</div>';
+    return '<div class="text-red-500">No body element found in the XML file. This may not be a valid Word document.</div>';
   }
   
   let html = '<div class="document-content">';
   
+  const sections = xmlDoc.querySelectorAll('w\\:sectPr, sectPr');
+  if (sections.length > 0) {
+    html += '<div class="document-sections">';
+    sections.forEach((section, index) => {
+      html += `<div class="document-section" id="section-${index+1}">`;
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+  
   const paragraphs = bodyElement.querySelectorAll('w\\:p, p');
+  let currentList = null;
+  let currentListLevel = -1;
+  
   paragraphs.forEach((p, index) => {
-    const pStyle = p.querySelector('w\\:pStyle, pStyle');
+    const pPr = p.querySelector('w\\:pPr, pPr');
+    const pStyle = pPr?.querySelector('w\\:pStyle, pStyle');
     const styleVal = pStyle?.getAttribute('w:val') || '';
     
-    if (styleVal.startsWith('Heading') || styleVal.startsWith('heading')) {
-      const level = styleVal.replace(/Heading|heading/, '').trim() || '1';
+    const numPr = pPr?.querySelector('w\\:numPr, numPr');
+    const numId = numPr?.querySelector('w\\:numId, numId')?.getAttribute('w:val');
+    const ilvl = numPr?.querySelector('w\\:ilvl, ilvl')?.getAttribute('w:val') || '0';
+    
+    const text = extractTextFromRunsWithFormatting(p);
+    
+    if (styleVal.toLowerCase().includes('heading')) {
+      const levelMatch = styleVal.match(/\d+$/);
+      const level = levelMatch ? levelMatch[0] : '1';
       const headingId = `heading-${index}`;
       
-      const text = extractTextFromRuns(p);
+      if (currentList) {
+        html += currentList === 'ol' ? '</ol>' : '</ul>';
+        currentList = null;
+        currentListLevel = -1;
+      }
       
       html += `<h${level} id="${headingId}" class="heading">${text}</h${level}>`;
-    } else {
-      const text = extractTextFromRuns(p);
+    }
+    else if (numPr) {
+      const listLevel = parseInt(ilvl, 10);
       
-      const numPr = p.querySelector('w\\:numPr, numPr');
-      if (numPr) {
-        const numId = numPr.querySelector('w\\:numId, numId')?.getAttribute('w:val');
-        const ilvl = numPr.querySelector('w\\:ilvl, ilvl')?.getAttribute('w:val') || '0';
-        
-        html += `<p class="numbered-item level-${ilvl}" data-num-id="${numId}">
-                  <span class="numbering">${parseInt(ilvl) + 1}.</span> ${text}
-                </p>`;
-      } else {
-        const ind = p.querySelector('w\\:ind, ind');
-        let indentClass = '';
-        
-        if (ind) {
-          const left = ind.getAttribute('w:left') || '';
-          if (left) {
-            const indentLevel = Math.min(Math.ceil(parseInt(left) / 720), 5);
-            indentClass = `indent-${indentLevel}`;
-          }
+      if (currentList === null) {
+        currentList = 'ol';
+        currentListLevel = listLevel;
+        html += '<ol class="numbered-list">';
+      } else if (listLevel > currentListLevel) {
+        html += '<ol class="nested-list">';
+        currentListLevel = listLevel;
+      } else if (listLevel < currentListLevel) {
+        for (let i = 0; i < currentListLevel - listLevel; i++) {
+          html += '</ol>';
         }
-        
-        html += `<p class="${indentClass}">${text}</p>`;
+        currentListLevel = listLevel;
+      }
+      
+      html += `<li class="numbered-list-item">${text}</li>`;
+    }
+    else {
+      if (currentList) {
+        html += currentList === 'ol' ? '</ol>' : '</ul>';
+        currentList = null;
+        currentListLevel = -1;
+      }
+      
+      const ind = pPr?.querySelector('w\\:ind, ind');
+      let indentClass = '';
+      
+      if (ind) {
+        const left = ind.getAttribute('w:left') || ind.getAttribute('left') || '';
+        if (left && !isNaN(parseInt(left))) {
+          const indentLevel = Math.min(Math.ceil(parseInt(left) / 720), 5);
+          indentClass = `indent-${indentLevel}`;
+        }
+      }
+      
+      const jc = pPr?.querySelector('w\\:jc, jc');
+      const alignment = jc?.getAttribute('w:val') || jc?.getAttribute('val') || '';
+      let alignClass = '';
+      
+      if (alignment === 'center') {
+        alignClass = 'text-center';
+      } else if (alignment === 'right') {
+        alignClass = 'text-right';
+      } else if (alignment === 'justify') {
+        alignClass = 'text-justify';
+      }
+      
+      if (!text.trim()) {
+        html += '<p class="empty-paragraph">&nbsp;</p>';
+      } else {
+        html += `<p class="text-gray-600 ${indentClass} ${alignClass}">${text}</p>`;
       }
     }
   });
+  
+  if (currentList) {
+    html += currentList === 'ol' ? '</ol>' : '</ul>';
+  }
   
   const tables = bodyElement.querySelectorAll('w\\:tbl, tbl');
   tables.forEach(table => {
     html += '<table class="w-full border-collapse mb-4">';
     
+    const tblGrid = table.querySelector('w\\:tblGrid, tblGrid');
+    const gridCols = tblGrid?.querySelectorAll('w\\:gridCol, gridCol') || [];
+    
     const rows = table.querySelectorAll('w\\:tr, tr');
+    let firstRow = true;
+    
     rows.forEach(row => {
       html += '<tr>';
       
       const cells = row.querySelectorAll('w\\:tc, tc');
       cells.forEach(cell => {
+        const tcPr = cell.querySelector('w\\:tcPr, tcPr');
+        
+        const gridSpan = tcPr?.querySelector('w\\:gridSpan, gridSpan')?.getAttribute('w:val') || 
+                         tcPr?.querySelector('w\\:gridSpan, gridSpan')?.getAttribute('val') || '1';
+                         
+        const vMerge = tcPr?.querySelector('w\\:vMerge, vMerge');
+        const rowSpan = vMerge && vMerge.getAttribute('w:val') !== 'restart' ? '2' : '1';
+        
         const cellContent = Array.from(cell.querySelectorAll('w\\:p, p'))
-          .map(p => extractTextFromRuns(p))
+          .map(p => extractTextFromRunsWithFormatting(p))
           .join('<br>');
         
-        html += `<td class="border border-gray-300 p-2">${cellContent}</td>`;
+        const cellTag = firstRow ? 'th' : 'td';
+        
+        const spanAttrs = [];
+        if (gridSpan !== '1') spanAttrs.push(`colspan="${gridSpan}"`);
+        if (rowSpan !== '1') spanAttrs.push(`rowspan="${rowSpan}"`);
+        
+        html += `<${cellTag} class="border border-gray-300 p-2" ${spanAttrs.join(' ')}>${cellContent}</${cellTag}>`;
       });
       
       html += '</tr>';
+      firstRow = false;
     });
     
     html += '</table>';
@@ -406,7 +499,7 @@ const processOoxmlStructure = (xmlDoc) => {
   
   html += '</div>';
   return html;
-};
+}
 
 const extractTextFromRuns = (paragraph) => {
   const runs = paragraph.querySelectorAll('w\\:r, r');

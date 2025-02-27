@@ -5,7 +5,7 @@
 @tailwind utilities;
 
 .document-content h1 {
-  @apply text-2xl font-bold mb-4 mt-6;
+  @apply text-2xl font-bold mb-4 mt-6 text-gray-500;
 }
 
 .document-content h2 {
@@ -57,17 +57,21 @@
   @apply bg-gray-100 text-gray-600;
 }
 
+.document-content .document-sections {
+  @apply text-gray-600;
+}
+
 .document-content blockquote {
-  @apply pl-4 border-l-4 border-gray-300 italic my-4;
+  @apply pl-4 border-l-4 border-gray-300 text-gray-600 italic my-4;
 }
 
 .document-content .numbered-list {
-  @apply pl-8 relative mb-4;
+  @apply pl-8 relative mb-4 text-gray-600;
   counter-reset: item;
 }
 
 .document-content .numbered-list-item {
-  @apply mb-2 relative;
+  @apply mb-2 relative text-gray-600;
 }
 
 .document-content .numbered-list-item::before {
@@ -76,11 +80,11 @@
   counter-increment: item;
 }
 
-.document-content .indent-1 { @apply pl-4; }
-.document-content .indent-2 { @apply pl-8; }
-.document-content .indent-3 { @apply pl-12; }
-.document-content .indent-4 { @apply pl-16; }
-.document-content .indent-5 { @apply pl-20; }
+.document-content .indent-1 { @apply pl-4 text-gray-600; }
+.document-content .indent-2 { @apply pl-8 text-gray-600; }
+.document-content .indent-3 { @apply pl-12 text-gray-600; }
+.document-content .indent-4 { @apply pl-16 text-gray-600; }
+.document-content .indent-5 { @apply pl-20 text-gray-600; }
 
 .document-content .first-line-indent { @apply first-line:ml-4; }
 .document-content .hanging-indent { @apply pl-4 -indent-4; }
@@ -167,7 +171,7 @@
 }
 
 .package-parts {
-  @apply border rounded-lg p-4 bg-white;
+  @apply border rounded-lg p-4 bg-white text-gray-600;
 }
 
 .relationship-group {
@@ -175,7 +179,7 @@
 }
 
 .relationship-group-title {
-  @apply p-2 bg-blue-100 font-medium;
+  @apply p-2 bg-blue-100 font-medium text-blue-600;
 }
 
 .relationship-items {

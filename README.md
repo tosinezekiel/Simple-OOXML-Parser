@@ -100,6 +100,52 @@ first_read/
 - XML parsing is done directly in the browser using the DOMParser API
 - No server-side processing is required
 
+# Package Implementation Documentation
+
+## OOXML Parser Implementation
+
+The FirstRead OOXML Parser is designed to extract and display the content of Office Open XML documents directly in the browser. This implementation uses a multi-layered approach to parse and render OOXML documents.
+
+### Core Components
+
+1. **XML Extraction**: The parser first extracts the raw XML content from uploaded files using the browser's built-in APIs.
+
+2. **Structure Detection**: The system analyzes the XML structure to identify whether it's a full OOXML package or individual XML parts (document.xml, document.xml.rels, etc.).
+
+3. **Relationship Mapping**: For relationship files (.rels), the parser extracts and visualizes the connections between different document parts, organizing them by type for better comprehension.
+
+4. **Document Content Processing**: When processing document.xml files, the parser converts the OOXML structure into formatted HTML while preserving:
+   - Text formatting (bold, italic, underline, and color)
+   - Document structure (paragraphs, headings, sections)
+   - Lists with proper numbering and hierarchy
+   - Tables with merged cells and formatting
+   - Indentation and alignment
+
+### Processing Flow
+
+The OOXML processing pipeline consists of several specialized functions:
+
+- `processFile`: Handles file upload, initial XML parsing, and type detection
+- `processXmlDocument`: Determines the XML type and routes to specific processors
+- `processOoxmlStructure`: Transforms document.xml content into formatted HTML
+- `processOoxmlPackage`: Processes full OOXML packages, showing their structure
+- `processOoxmlRelationships`: Visualizes relationship (.rels) files
+- `extractTextFromRunsWithFormatting`: Preserves rich text formatting
+
+### Rendering Approach
+
+The implementation uses Tailwind CSS classes for styling and responsive design, ensuring a consistent appearance across devices. The document content is rendered with a focus on readability while maintaining the visual hierarchy of the original document.
+
+Key rendering features include:
+
+- Dynamic table of contents generation from document headings
+- Responsive tables that adapt to different screen sizes
+- Proper indentation levels matched to the original document
+- Color-coded relationship visualization for better comprehension
+- Print-friendly output formatting
+
+This browser-based implementation eliminates the need for server-side processing, enhancing privacy and performance while making document analysis accessible to users without specialized software.
+
 ## License
 
 [MIT](LICENSE)

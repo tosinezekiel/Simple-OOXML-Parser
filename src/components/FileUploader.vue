@@ -70,6 +70,14 @@ const processFile = async (file) => {
   }
 };
 
+const clearDocument = () => {
+  fileName.value = '';
+  if (fileInput.value) {
+    fileInput.value.value = '';
+  }
+  emit('parsed-document', null);
+};
+
 const handleDragEnter = (e) => {
   e.preventDefault();
   e.stopPropagation();
@@ -695,7 +703,7 @@ const extractGenericXmlHeadings = (xmlDoc) => {
         <span class="text-blue-600 font-medium">{{ fileName }}</span>
         <button
           class="ml-4 text-red-500 hover:text-red-700"
-          @click.stop="fileName = ''; emit('parsed-document', null)"
+          @click.stop="clearDocument"
         >
           <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />

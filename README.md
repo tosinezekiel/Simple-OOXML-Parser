@@ -1,4 +1,4 @@
-# FirstRead OOXML Relationship Parser
+# Simple OOXML Relationship Parser
 
 A Vue.js SPA that allows users to upload, parse, and visualize OOXML (Office Open XML) documents, with a focus on relationship files.
 
